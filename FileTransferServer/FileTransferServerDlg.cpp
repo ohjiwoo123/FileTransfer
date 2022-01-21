@@ -159,10 +159,6 @@ HCURSOR CFileTransferServerDlg::OnQueryDragIcon()
 	return static_cast<HCURSOR>(m_hIcon);
 }
 
-#include <vector>	// 모형자 (템플릿)
-//using namespace std;
-std::vector<SOCKET> g_sockList;	// 소켓의 배열 <SOCKET> ,int, HUMAN 구조체 등등 사용가능
-
 // 파일 정보 구조체
 typedef struct FILE_INFO
 {
@@ -170,13 +166,10 @@ typedef struct FILE_INFO
 	int Size;
 }FILE_INFO;
 
-CString NameCopy;
+CString g_NameCopy;
 
 DWORD WINAPI WorkThread(LPVOID p)
 {
-	//HANDLE hMutex;
-	//hMutex = CreateMutex(NULL, FALSE, NULL);
-
 	SOCKET ClientSocket = (SOCKET)p;
 	char buf[4096];
 	FILE_INFO file_info;
@@ -188,7 +181,7 @@ DWORD WINAPI WorkThread(LPVOID p)
 	LARGE_INTEGER llFileSize = { 0 };
 
 	// 파일 경로를 file_info.FileName에 복사한다.
-	lstrcpy(file_info.FileName,NameCopy);
+	lstrcpy(file_info.FileName,g_NameCopy);
 
 	hDest = CreateFile(file_info.FileName, GENERIC_READ | GENERIC_WRITE,
 		FILE_SHARE_READ| FILE_SHARE_WRITE, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, 0);
@@ -213,21 +206,8 @@ DWORD WINAPI WorkThread(LPVOID p)
 			break;
 	}
 
-	//WaitForSingleObject(hMutex, INFINITE);
-	//ReleaseMutex(hMutex);
-	//CloseHandle(hMutex);
-
-	// 6. closesocket() 벡터 배열로 소켓 클라이언트 리스트 제거 
-	for (int i = 0; i < g_sockList.size(); i++)
-	{
-		if (g_sockList[i] == ClientSocket)
-		{
-			//제거
-			g_sockList.erase(g_sockList.begin() + i);
-			break;
-		}
-	}
 	closesocket(ClientSocket);
+	CloseHandle(hDest);
 	return 0;
 }
 
@@ -289,11 +269,6 @@ DWORD WINAPI ListenThread(LPVOID p)
 		{
 			return -1;
 		}
-
-		//g_sockList[g_nCount] = ClientSocket;
-		//g_nCount++;
-		// 아래 한 줄로 위의 2줄 코드가 대체됨.
-		g_sockList.push_back(ClientSocket);
 		
 		CFileTransferServerDlg* pp = (CFileTransferServerDlg*)p;
 		pp->m_Ctrl_ListBox.AddString(_T("클라이언트 접속 완료"));
@@ -317,11 +292,11 @@ DWORD WINAPI ListenThread(LPVOID p)
 void CFileTransferServerDlg::OnBnClickedButton1()	// 파일 전송 시작 버튼 
 {
 	// TODO: 여기에 컨트롤 알림 처리기 코드를 추가합니다.
-	// if (SourceFile ==_T(""))
-	//{
-	//	AfxMessageBox(_T("전송할 파일을 선택하세요"));
-	//	return;
-	//}
+	 if (g_NameCopy ==_T(""))
+	{
+		AfxMessageBox(_T("전송할 파일을 선택하세요"));
+		return;
+	}
 	CloseHandle(CreateThread(NULL, 0, ListenThread, this, 0, 0));
 }
 
@@ -335,7 +310,7 @@ void CFileTransferServerDlg::OnBnClickedButton2()	// 전송할 파일 선택 버
 	int nResult = a.DoModal();
 	if (nResult == IDOK)
 	{
-		NameCopy = a.GetPathName();
+		g_NameCopy = a.GetPathName();
 		SetDlgItemText(IDC_FILEPATH, a.GetPathName());
 	}
 }
