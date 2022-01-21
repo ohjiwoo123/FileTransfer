@@ -187,14 +187,17 @@ DWORD WINAPI WorkThread(LPVOID p)
 	BOOL bSuccess = FALSE;
 	LARGE_INTEGER llFileSize = { 0 };
 
+	// 파일 경로를 file_info.FileName에 복사한다.
 	lstrcpy(file_info.FileName,NameCopy);
 
 	hDest = CreateFile(file_info.FileName, GENERIC_READ | GENERIC_WRITE,
-		FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, 0);
+		FILE_SHARE_READ| FILE_SHARE_WRITE, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, 0);
 
+	// 파일 사이즈를 구한다.
 	GetFileSizeEx(hDest,&llFileSize);
 	file_info.Size = llFileSize.QuadPart;
 
+	// 파일 이름에 .net을 추가한다. 
 	lstrcat(file_info.FileName, _T(".net"));
 	send(ClientSocket, (char*)&file_info, sizeof(file_info), 0);
 
@@ -305,6 +308,8 @@ DWORD WINAPI ListenThread(LPVOID p)
 	}
 	//------------------------------------------
 	// 종료
+	// 콘솔과 다르게 버튼 누를 때 마다 되므로 리슨소켓을 닫아줘야한다.
+	closesocket(ListenSocket);
 	WSACleanup();
 	return 0;
 }
